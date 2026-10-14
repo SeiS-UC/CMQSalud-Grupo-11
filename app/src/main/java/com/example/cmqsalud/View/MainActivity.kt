@@ -1,4 +1,4 @@
-package com.example.cmqsalud
+package com.example.cmqsalud.View
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -16,17 +16,19 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.cmqsalud.ui.theme.CMQSaludTheme
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.cmqsalud.ViewModel.LoginViewModel
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,10 +69,12 @@ fun basicButton(text: String, onClick: () -> Unit) {
 
 //pantalla 1 login
 @Composable
-fun LoginScreen(modifier: Modifier = Modifier) {
+fun LoginScreen(modifier: Modifier = Modifier,
+                viewModel: LoginViewModel = viewModel()) {
     // Variables para guardar lo que el usuario escribe
     var rut by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    val estadoLogin by viewModel.estadoLogin.collectAsState()
 
     Column(
         modifier = Modifier
@@ -102,9 +106,17 @@ fun LoginScreen(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(16.dp))
 
         // BUTTON BASICO, REUTILIZABLE.
-        //basicTextField(
-        //    text = "Iniciar Sesión",
-        //    onClick = {  AGREGAR LÓGICA DE VÁLIDACION  }
-        //)
+        basicButton(
+                text = "Iniciar Sesión",
+                onClick = {
+                    // 3. Enviamos los datos al ViewModel al hacer clic
+                    viewModel.validarCredenciales(rut, password)
+                }
+            )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 4. Mostramos temporalmente el resultado en pantalla para comprobar que funciona
+                    Text(text = "Estado: $estadoLogin")
     }
 }
