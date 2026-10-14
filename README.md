@@ -32,4 +32,4 @@ La aplicación móvil proporciona un repositorio centralizado que permite gestio
 ## ⚙️ Instalación y Ejecución
 1. Clona este repositorio en tu máquina local:
    ```bash
-   git clone [https://github.com/SeiS-UC/CMQSalud-Grupo-11.git]
+   git clone https://github.com/SeiS-UC/CMQSalud-Grupo-11.git
