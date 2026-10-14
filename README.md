@@ -2,7 +2,7 @@
 
 **Institución:** Duoc UC  
 **Asignatura:** Desarrollo de Aplicaciones Móviles (DSY1105)  
-**Sección:** [Tu Sección]  
+**Sección:** 004D 
 **Equipo:** Grupo 11  
 
 **Integrantes:**
