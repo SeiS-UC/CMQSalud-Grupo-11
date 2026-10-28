@@ -1,11 +1,16 @@
 package com.example.cmqsalud.View
 
+import android.graphics.Bitmap
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,10 +22,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -39,10 +46,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.cmqsalud.Model.DocumentoEntity
+import com.example.cmqsalud.Model.Usuario
 import com.example.cmqsalud.ViewModel.LoginViewModel
 import kotlinx.coroutines.delay
 
@@ -95,26 +105,21 @@ fun LoginScreen(
     val errorRut by viewModel.errorRutLogin.collectAsState()
     val errorPass by viewModel.errorPassLogin.collectAsState()
     val estadoLogin by viewModel.estadoLogin.collectAsState()
+    val usuarioActivo by viewModel.usuarioActivo.collectAsState()
     val mensajeConfirmacion by viewModel.mensajeConfirmacion.collectAsState()
 
     var mostrandoRegistro by remember { mutableStateOf(false) }
 
-    // 1. PANTALLA PRINCIPAL / HOME (Meta 6: Navegación y uso de datos ingresados)
-    if (estadoLogin.startsWith("Exito_")) {
-        val partes = estadoLogin.split("_")
-        val nombreActivo = partes.getOrNull(1) ?: "Usuario"
-        val perfilActivo = partes.getOrNull(2) ?: "Funcionario"
-        val areaActiva = partes.getOrNull(3) ?: "General"
-
+    // 1. PANTALLA PRINCIPAL (Conectada a Room Database)
+    if (estadoLogin == "Exito" && usuarioActivo != null) {
         HomeScreen(
             modifier = modifier,
-            nombre = nombreActivo,
-            perfil = perfilActivo,
-            area = areaActiva,
+            usuario = usuarioActivo!!,
+            viewModel = viewModel,
             onCerrarSesion = { viewModel.cerrarSesion() }
         )
     }
-    // 2. PANTALLA DE REGISTRO
+    // 2. PANTALLA DE REGISTRO DE FUNCIONARIOS
     else if (mostrandoRegistro) {
         RegistroScreen(
             modifier = modifier,
@@ -135,9 +140,14 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "CMQ Área Salud",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
+                text = "CMQ Área Salud — APS",
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Gestión Documental de Funcionarios",
+                fontSize = 15.sp,
+                color = Color.Gray,
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
@@ -153,7 +163,7 @@ fun LoginScreen(
             basicTextField(
                 value = rut,
                 onValueChange = { viewModel.onRutLoginChange(it) },
-                label = "RUT (Ej: 12345678-9)",
+                label = "RUT del Funcionario (Ej: 12345678-9)",
                 errorMessage = errorRut
             )
 
@@ -196,108 +206,342 @@ fun LoginScreen(
                     fontWeight = FontWeight.Medium
                 )
             } else {
-                Text(text = "Estado del sistema: $estadoLogin")
+                Text(
+                    text = "Persistencia Room SQLite Activa",
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
             }
         }
     }
 }
 
-// Pantalla Principal (Home) conectada que recibe y utiliza los datos del usuario (Meta 6)
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
-    nombre: String,
-    perfil: String,
-    area: String,
+    usuario: Usuario,
+    viewModel: LoginViewModel,
     onCerrarSesion: () -> Unit
 ) {
-    var seccionSeleccionada by remember { mutableStateOf<String?>(null) }
+    var moduloActivo by remember { mutableStateOf("LISTADO") }
+
+    val listaDocumentos by viewModel.listaDocumentos.collectAsState()
+    val docForm by viewModel.docFormState.collectAsState()
+    val bitacora by viewModel.bitacoraTrazabilidad.collectAsState()
+
+    // Cámara nativa para capturar respaldo físico
+    var fotoCapturadaBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            fotoCapturadaBitmap = bitmap
+            viewModel.onFotoCamaraCapturada(true)
+        }
+    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(24.dp)
+            .padding(20.dp)
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
     ) {
-        // Cabecera de bienvenida con los datos dinámicos del usuario
         Text(
-            text = "Panel de Control — CMQ Salud",
-            fontSize = 22.sp,
+            text = "Repositorio Central — CMQ Salud",
+            fontSize = 21.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.height(8.dp))
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = "Bienvenido/a, $nombre", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                Text(text = "Rol: $perfil", fontSize = 15.sp)
-                Text(text = "Unidad Asignada: $area", fontSize = 15.sp, color = Color.Gray)
+            Column(modifier = Modifier.padding(14.dp)) {
+                Text(text = "Funcionario/a: ${usuario.nombre}", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(text = "RUT: ${usuario.rut} | Rol: ${usuario.perfil}", fontSize = 14.sp)
+                Text(text = "Establecimiento APS: ${usuario.centroSalud}", fontSize = 14.sp, color = Color.DarkGray)
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = "Opciones del Sistema:",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        Spacer(modifier = Modifier.height(14.dp))
 
-        // Opciones ideales para el caso de salud
-        val opcionesMenu = listOf(
-            "📋 Gestión y Registro de Pacientes",
-            "💊 Solicitud de Insumos Médicos",
-            "📅 Revisión de Turnos y Horarios",
-            "📊 Reporte de Estado de Unidad"
-        )
-
-        opcionesMenu.forEach { opcion ->
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             OutlinedButton(
-                onClick = { seccionSeleccionada = opcion },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
+                onClick = { moduloActivo = "LISTADO" },
+                modifier = Modifier.weight(1f).padding(end = 4.dp)
             ) {
-                Text(text = opcion, fontSize = 15.sp)
+                Text("📁 Expedientes (${listaDocumentos.size})", fontSize = 11.sp)
+            }
+            OutlinedButton(
+                onClick = {
+                    viewModel.limpiarFormularioDocumento()
+                    fotoCapturadaBitmap = null
+                    moduloActivo = "FORMULARIO"
+                },
+                modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
+            ) {
+                Text("➕ Subir Doc", fontSize = 11.sp)
+            }
+            OutlinedButton(
+                onClick = { moduloActivo = "TRAZABILIDAD" },
+                modifier = Modifier.weight(1f).padding(start = 4.dp)
+            ) {
+                Text("🛡️ Auditoría", fontSize = 11.sp)
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Si el usuario hace clic en una opción, se muestra la simulación del módulo (Meta 6)
-        if (seccionSeleccionada != null) {
+        // --- MÓDULO 1: FORMULARIO CRUD (Crear y Editar con validación) ---
+        if (moduloActivo == "FORMULARIO") {
+            val tiposDoc = listOf(
+                "Permiso Administrativo",
+                "Certificado Capacitación",
+                "Contrato / Anexo Laboral",
+                "Licencia / Respaldo Médico"
+            )
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Módulo Activo:",
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        text = if (docForm.idEdicion == null) "Cargar Nuevo Documento a Room" else "Editar Documento #${docForm.idEdicion}",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = seccionSeleccionada!!)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Acceso autorizado para personal de $area.",
-                        fontSize = 13.sp,
-                        color = Color.DarkGray
+
+                    basicTextField(
+                        value = docForm.titulo,
+                        onValueChange = { viewModel.onTituloDocChange(it) },
+                        label = "Título o detalle (Obligatorio, mín 5 carac)",
+                        errorMessage = docForm.errorTitulo
                     )
+
+                    basicTextField(
+                        value = docForm.periodoHoras,
+                        onValueChange = { viewModel.onPeriodoDocChange(it) },
+                        label = "Período u Horas (Ej: 30 hrs / 3 días)",
+                        errorMessage = docForm.errorPeriodo
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = "Categoría Documental:", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+
+                    tiposDoc.forEach { tipo ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            RadioButton(
+                                selected = (docForm.tipoSeleccionado == tipo),
+                                onClick = { viewModel.onTipoDocChange(tipo) }
+                            )
+                            Text(text = tipo, fontSize = 14.sp)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedButton(
+                        onClick = { cameraLauncher.launch() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = if (docForm.tieneFotoCamara) "📷 Respaldo Capturado (Volver a tomar)" else "📷 Capturar Documento Físico con Cámara"
+                        )
+                    }
+
+                    if (fotoCapturadaBitmap != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Image(
+                            bitmap = fotoCapturadaBitmap!!.asImageBitmap(),
+                            contentDescription = "Vista previa documento digitalizado",
+                            modifier = Modifier
+                                .size(120.dp)
+                                .align(Alignment.CenterHorizontally)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    basicButton(
+                        text = if (docForm.idEdicion == null) "Guardar en Base de Datos Local" else "Actualizar Cambios en Room",
+                        onClick = {
+                            viewModel.guardarDocumentoEnRoom()
+                            if (docForm.titulo.trim().length >= 5) {
+                                moduloActivo = "LISTADO"
+                            }
+                        }
+                    )
+
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.limpiarFormularioDocumento()
+                            moduloActivo = "LISTADO"
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Cancelar")
+                    }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        Spacer(modifier = Modifier.weight(1f, fill = false))
+        // --- MÓDULO 2: LISTADO CRUD (Leer, Editar y Eliminar en Room) ---
+        if (moduloActivo == "LISTADO") {
+            Text(
+                text = "Documentos Almacenados en Room (SQLite):",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            if (listaDocumentos.isEmpty()) {
+                Text(
+                    text = "No hay documentos registrados aún. Presione '➕ Subir Doc' para agregar uno.",
+                    color = Color.Gray,
+                    modifier = Modifier.padding(vertical = 16.dp)
+                )
+            }
+
+            listaDocumentos.forEach { doc ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text(text = doc.titulo, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "Tipo: ${doc.tipoDocumento} (${doc.periodoHoras})", fontSize = 14.sp)
+                        Text(text = "Funcionario: ${doc.nombreFuncionario} (${doc.centroSalud})", fontSize = 13.sp)
+                        Text(text = "Fecha carga: ${doc.fechaCarga}", fontSize = 12.sp, color = Color.Gray)
+                        Text(text = "Última modificación: ${doc.ultimaModificacionPor}", fontSize = 12.sp, color = Color.Gray)
+
+                        if (doc.tieneRespaldoCamara) {
+                            Text(
+                                text = "📷 Incluye respaldo digitalizado por cámara",
+                                fontSize = 12.sp,
+                                color = Color(0xFF1565C0),
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Estado: ${doc.estado}",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = when {
+                                doc.estado.contains("Aprobado") -> Color(0xFF2E7D32)
+                                doc.estado.contains("Rechazado") -> MaterialTheme.colorScheme.error
+                                doc.estado.contains("Verificado") -> Color(0xFF1565C0)
+                                else -> Color(0xFFE65100)
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Botones CRUD (Editar y Eliminar)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    viewModel.cargarDocumentoParaEditar(doc)
+                                    moduloActivo = "FORMULARIO"
+                                }
+                            ) {
+                                Text("✏️ Editar", fontSize = 12.sp)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            OutlinedButton(
+                                onClick = { viewModel.eliminarDocumentoDeRoom(doc) },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Text("🗑️ Eliminar", fontSize = 12.sp)
+                            }
+                        }
+
+                        // Controles diferenciados según rol del caso
+                        if (usuario.perfil == "Administrativo") {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Button(
+                                onClick = { viewModel.cambiarEstadoDocumento(doc, "Verificado por Admin") },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("✓ Verificar Integridad (Rol Administrativo)", fontSize = 13.sp)
+                            }
+                        }
+
+                        if (usuario.perfil == "Jefatura") {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Button(
+                                    onClick = { viewModel.cambiarEstadoDocumento(doc, "Aprobado por Jefatura") },
+                                    modifier = Modifier.weight(1f).padding(end = 4.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                                ) {
+                                    Text("Aprobar", fontSize = 13.sp)
+                                }
+                                Button(
+                                    onClick = { viewModel.cambiarEstadoDocumento(doc, "Rechazado por Jefatura") },
+                                    modifier = Modifier.weight(1f).padding(start = 4.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                                ) {
+                                    Text("Rechazar", fontSize = 13.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- MÓDULO 3: BITÁCORA DE TRAZABILIDAD (Ciberseguridad) ---
+        if (moduloActivo == "TRAZABILIDAD") {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Registro de Trazabilidad y Auditoría",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Control de accesos, cargas, modificaciones y aprobaciones en CMQ Salud:",
+                        fontSize = 13.sp,
+                        color = Color.DarkGray,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    bitacora.forEach { registro ->
+                        Text(
+                            text = "• $registro",
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         basicButton(
-            text = "Cerrar Sesión",
+            text = "Cerrar Sesión Segura",
             onClick = onCerrarSesion
         )
     }
@@ -310,7 +554,12 @@ fun RegistroScreen(
     onVolverAlLogin: () -> Unit
 ) {
     val uiState by viewModel.registroState.collectAsState()
-    val areasMedicas = listOf("Urgencias", "Farmacia", "Laboratorio Clínico")
+    val centrosSaludAps = listOf(
+        "CESFAM Quilpué",
+        "CESFAM Belloto Sur",
+        "CECOSF El Retiro",
+        "Administración Central CMQ"
+    )
 
     LaunchedEffect(uiState.registroExitoso) {
         if (uiState.registroExitoso) {
@@ -352,28 +601,28 @@ fun RegistroScreen(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "¡Usuario registrado!",
-                    fontSize = 24.sp,
+                    text = "¡Usuario registrado en Room!",
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF2E7D32)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Perfil asignado: Funcionario (${uiState.areaSeleccionada})",
-                    fontSize = 16.sp
+                    text = "Perfil: Funcionario (${uiState.centroSeleccionado})",
+                    fontSize = 15.sp
                 )
             }
         }
 
         if (!uiState.registroExitoso) {
             Text(
-                text = "Registro de Funcionario",
+                text = "Registro de Funcionario APS",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 4.dp)
             )
             Text(
-                text = "Rol asignado por defecto: Funcionario",
+                text = "Rol asignado por seguridad: Funcionario",
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -403,22 +652,22 @@ fun RegistroScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Seleccione su Unidad / Área:",
-                fontSize = 16.sp,
+                text = "Seleccione Establecimiento de Salud (APS):",
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.align(Alignment.Start)
             )
 
-            areasMedicas.forEach { area ->
+            centrosSaludAps.forEach { centro ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     RadioButton(
-                        selected = (area == uiState.areaSeleccionada),
-                        onClick = { viewModel.onAreaChange(area) }
+                        selected = (centro == uiState.centroSeleccionado),
+                        onClick = { viewModel.onCentroChange(centro) }
                     )
-                    Text(text = area, fontSize = 15.sp)
+                    Text(text = centro, fontSize = 14.sp)
                 }
             }
 
@@ -433,8 +682,8 @@ fun RegistroScreen(
                     onCheckedChange = { viewModel.onPoliticasChange(it) }
                 )
                 Text(
-                    text = "Acepto políticas de confidencialidad de CMQ Salud",
-                    fontSize = 14.sp
+                    text = "Acepto políticas de protección de datos de CMQ Salud",
+                    fontSize = 13.sp
                 )
             }
 
@@ -452,7 +701,7 @@ fun RegistroScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             basicButton(
-                text = "Guardar y Registrar",
+                text = "Guardar y Registrar en Room",
                 onClick = { viewModel.procesarRegistro() }
             )
 
