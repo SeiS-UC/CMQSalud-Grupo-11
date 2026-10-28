@@ -56,6 +56,13 @@ import com.example.cmqsalud.Model.Usuario
 import com.example.cmqsalud.ViewModel.LoginViewModel
 import kotlinx.coroutines.delay
 
+// --- PALETA DE COLORES VICHY ---
+val VichyPrimary = Color(0xFF05AD98)
+val VichySurfaceGray = Color(0xFFBBBFBF)
+val VichyDarkGray = Color(0xFF4A4A4A)     // Gris oscuro optimizado para alta legibilidad
+val VichyBlackText = Color(0xFF1A1A1A)    // Texto principal casi negro
+val VichyWhite = Color(0xFFFFFFFF)
+
 @Composable
 fun basicTextField(
     value: String,
@@ -66,7 +73,7 @@ fun basicTextField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
+        label = { Text(label, color = VichyDarkGray) },
         singleLine = true,
         isError = errorMessage != null,
         supportingText = {
@@ -87,11 +94,12 @@ fun basicTextField(
 fun basicButton(text: String, onClick: () -> Unit) {
     Button(
         onClick = onClick,
+        colors = ButtonDefaults.buttonColors(containerColor = VichyPrimary),
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
     ) {
-        Text(text = text, fontSize = 16.sp)
+        Text(text = text, fontSize = 16.sp, color = VichyWhite, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -110,7 +118,6 @@ fun LoginScreen(
 
     var mostrandoRegistro by remember { mutableStateOf(false) }
 
-    // 1. PANTALLA PRINCIPAL (Conectada a Room Database)
     if (estadoLogin == "Exito" && usuarioActivo != null) {
         HomeScreen(
             modifier = modifier,
@@ -118,9 +125,7 @@ fun LoginScreen(
             viewModel = viewModel,
             onCerrarSesion = { viewModel.cerrarSesion() }
         )
-    }
-    // 2. PANTALLA DE REGISTRO DE FUNCIONARIOS
-    else if (mostrandoRegistro) {
+    } else if (mostrandoRegistro) {
         RegistroScreen(
             modifier = modifier,
             viewModel = viewModel,
@@ -129,12 +134,11 @@ fun LoginScreen(
                 mostrandoRegistro = false
             }
         )
-    }
-    // 3. PANTALLA DE LOGIN
-    else {
+    } else {
         Column(
             modifier = modifier
                 .fillMaxSize()
+                .background(VichyWhite)
                 .padding(24.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
@@ -142,19 +146,21 @@ fun LoginScreen(
             Text(
                 text = "CMQ Área Salud — APS",
                 fontSize = 26.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = VichyPrimary
             )
             Text(
                 text = "Gestión Documental de Funcionarios",
                 fontSize = 15.sp,
-                color = Color.Gray,
+                fontWeight = FontWeight.Medium,
+                color = VichyDarkGray,
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
             if (mensajeConfirmacion.isNotEmpty()) {
                 Text(
                     text = mensajeConfirmacion,
-                    color = Color(0xFF2E7D32),
+                    color = VichyPrimary,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
@@ -194,7 +200,7 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .padding(vertical = 6.dp)
             ) {
-                Text(text = "Registrar nuevo funcionario", fontSize = 16.sp)
+                Text(text = "Registrarme", fontSize = 16.sp, color = VichyPrimary, fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -207,9 +213,9 @@ fun LoginScreen(
                 )
             } else {
                 Text(
-                    text = "Persistencia Room SQLite Activa",
+                    text = "Version MVP",
                     fontSize = 13.sp,
-                    color = Color.Gray
+                    color = VichyDarkGray
                 )
             }
         }
@@ -229,7 +235,6 @@ fun HomeScreen(
     val docForm by viewModel.docFormState.collectAsState()
     val bitacora by viewModel.bitacoraTrazabilidad.collectAsState()
 
-    // Cámara nativa para capturar respaldo físico
     var fotoCapturadaBitmap by remember { mutableStateOf<Bitmap?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
@@ -243,6 +248,7 @@ fun HomeScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(VichyWhite)
             .padding(20.dp)
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Top,
@@ -252,18 +258,19 @@ fun HomeScreen(
             text = "Repositorio Central — CMQ Salud",
             fontSize = 21.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = VichyPrimary
         )
         Spacer(modifier = Modifier.height(8.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = VichySurfaceGray.copy(alpha = 0.25f)),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
-                Text(text = "Funcionario/a: ${usuario.nombre}", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text(text = "RUT: ${usuario.rut} | Rol: ${usuario.perfil}", fontSize = 14.sp)
-                Text(text = "Establecimiento APS: ${usuario.centroSalud}", fontSize = 14.sp, color = Color.DarkGray)
+                Text(text = "Funcionario/a: ${usuario.nombre}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = VichyBlackText)
+                Text(text = "RUT: ${usuario.rut} | Rol: ${usuario.perfil}", fontSize = 14.sp, color = VichyDarkGray)
+                Text(text = "Establecimiento APS: ${usuario.centroSalud}", fontSize = 14.sp, color = VichyDarkGray)
             }
         }
 
@@ -277,7 +284,7 @@ fun HomeScreen(
                 onClick = { moduloActivo = "LISTADO" },
                 modifier = Modifier.weight(1f).padding(end = 4.dp)
             ) {
-                Text("📁 Expedientes (${listaDocumentos.size})", fontSize = 11.sp)
+                Text("📁 Mis Docs (${listaDocumentos.size})", fontSize = 11.sp, color = VichyPrimary, fontWeight = FontWeight.Bold)
             }
             OutlinedButton(
                 onClick = {
@@ -287,19 +294,19 @@ fun HomeScreen(
                 },
                 modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
             ) {
-                Text("➕ Subir Doc", fontSize = 11.sp)
+                Text("➕ Subir", fontSize = 11.sp, color = VichyPrimary, fontWeight = FontWeight.Bold)
             }
             OutlinedButton(
                 onClick = { moduloActivo = "TRAZABILIDAD" },
                 modifier = Modifier.weight(1f).padding(start = 4.dp)
             ) {
-                Text("🛡️ Auditoría", fontSize = 11.sp)
+                Text("🛡️ Revisión", fontSize = 11.sp, color = VichyPrimary, fontWeight = FontWeight.Bold)
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- MÓDULO 1: FORMULARIO CRUD (Crear y Editar con validación) ---
+        // --- MÓDULO 1: FORMULARIO CRUD ---
         if (moduloActivo == "FORMULARIO") {
             val tiposDoc = listOf(
                 "Permiso Administrativo",
@@ -310,20 +317,21 @@ fun HomeScreen(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                colors = CardDefaults.cardColors(containerColor = VichySurfaceGray.copy(alpha = 0.15f))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = if (docForm.idEdicion == null) "Cargar Nuevo Documento a Room" else "Editar Documento #${docForm.idEdicion}",
+                        text = if (docForm.idEdicion == null) "Cargar Nuevo Documento" else "Editar Documento #${docForm.idEdicion}",
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = VichyPrimary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
                     basicTextField(
                         value = docForm.titulo,
                         onValueChange = { viewModel.onTituloDocChange(it) },
-                        label = "Título o detalle (Obligatorio, mín 5 carac)",
+                        label = "Título o detalle (Obligatorio, mín 5 caracteres)",
                         errorMessage = docForm.errorTitulo
                     )
 
@@ -335,7 +343,7 @@ fun HomeScreen(
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = "Categoría Documental:", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Text(text = "Categoría Documental:", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = VichyBlackText)
 
                     tiposDoc.forEach { tipo ->
                         Row(
@@ -346,7 +354,7 @@ fun HomeScreen(
                                 selected = (docForm.tipoSeleccionado == tipo),
                                 onClick = { viewModel.onTipoDocChange(tipo) }
                             )
-                            Text(text = tipo, fontSize = 14.sp)
+                            Text(text = tipo, fontSize = 14.sp, color = VichyBlackText, fontWeight = FontWeight.Medium)
                         }
                     }
 
@@ -357,7 +365,9 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = if (docForm.tieneFotoCamara) "📷 Respaldo Capturado (Volver a tomar)" else "📷 Capturar Documento Físico con Cámara"
+                            text = if (docForm.tieneFotoCamara) "📷 Volver a tomar" else "📷 Capturar Documento",
+                            color = VichyPrimary,
+                            fontWeight = FontWeight.Bold
                         )
                     }
 
@@ -375,7 +385,7 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     basicButton(
-                        text = if (docForm.idEdicion == null) "Guardar en Base de Datos Local" else "Actualizar Cambios en Room",
+                        text = if (docForm.idEdicion == null) "Guardar" else "Actualizar",
                         onClick = {
                             viewModel.guardarDocumentoEnRoom()
                             if (docForm.titulo.trim().length >= 5) {
@@ -391,25 +401,26 @@ fun HomeScreen(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Cancelar")
+                        Text("Cancelar", color = VichyDarkGray, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
 
-        // --- MÓDULO 2: LISTADO CRUD (Leer, Editar y Eliminar en Room) ---
+        // --- MÓDULO 2: LISTADO CRUD ---
         if (moduloActivo == "LISTADO") {
             Text(
-                text = "Documentos Almacenados en Room (SQLite):",
+                text = "Documentos Almacenados",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
+                color = VichyPrimary,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
             if (listaDocumentos.isEmpty()) {
                 Text(
-                    text = "No hay documentos registrados aún. Presione '➕ Subir Doc' para agregar uno.",
-                    color = Color.Gray,
+                    text = "No hay documentos registrados aún. Presione '➕' para agregar uno.",
+                    color = VichyDarkGray,
                     modifier = Modifier.padding(vertical = 16.dp)
                 )
             }
@@ -419,21 +430,22 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 6.dp),
+                    colors = CardDefaults.cardColors(containerColor = VichyWhite),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
-                        Text(text = doc.titulo, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        Text(text = "Tipo: ${doc.tipoDocumento} (${doc.periodoHoras})", fontSize = 14.sp)
-                        Text(text = "Funcionario: ${doc.nombreFuncionario} (${doc.centroSalud})", fontSize = 13.sp)
-                        Text(text = "Fecha carga: ${doc.fechaCarga}", fontSize = 12.sp, color = Color.Gray)
-                        Text(text = "Última modificación: ${doc.ultimaModificacionPor}", fontSize = 12.sp, color = Color.Gray)
+                        Text(text = doc.titulo, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = VichyBlackText)
+                        Text(text = "Tipo: ${doc.tipoDocumento} (${doc.periodoHoras})", fontSize = 14.sp, color = VichyBlackText)
+                        Text(text = "Funcionario: ${doc.nombreFuncionario} (${doc.centroSalud})", fontSize = 13.sp, color = VichyDarkGray)
+                        Text(text = "Fecha carga: ${doc.fechaCarga}", fontSize = 12.sp, color = VichyDarkGray)
+                        Text(text = "Última modificación: ${doc.ultimaModificacionPor}", fontSize = 12.sp, color = VichyDarkGray)
 
                         if (doc.tieneRespaldoCamara) {
                             Text(
                                 text = "📷 Incluye respaldo digitalizado por cámara",
                                 fontSize = 12.sp,
-                                color = Color(0xFF1565C0),
-                                fontWeight = FontWeight.Medium
+                                color = VichyPrimary,
+                                fontWeight = FontWeight.Bold
                             )
                         }
 
@@ -443,7 +455,7 @@ fun HomeScreen(
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = when {
-                                doc.estado.contains("Aprobado") -> Color(0xFF2E7D32)
+                                doc.estado.contains("Aprobado") -> VichyPrimary
                                 doc.estado.contains("Rechazado") -> MaterialTheme.colorScheme.error
                                 doc.estado.contains("Verificado") -> Color(0xFF1565C0)
                                 else -> Color(0xFFE65100)
@@ -452,7 +464,6 @@ fun HomeScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Botones CRUD (Editar y Eliminar)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Start
@@ -463,25 +474,25 @@ fun HomeScreen(
                                     moduloActivo = "FORMULARIO"
                                 }
                             ) {
-                                Text("✏️ Editar", fontSize = 12.sp)
+                                Text("✏️ Editar", fontSize = 12.sp, color = VichyPrimary, fontWeight = FontWeight.Bold)
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             OutlinedButton(
                                 onClick = { viewModel.eliminarDocumentoDeRoom(doc) },
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                             ) {
-                                Text("🗑️ Eliminar", fontSize = 12.sp)
+                                Text("🗑️ Eliminar", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
 
-                        // Controles diferenciados según rol del caso
                         if (usuario.perfil == "Administrativo") {
                             Spacer(modifier = Modifier.height(6.dp))
                             Button(
                                 onClick = { viewModel.cambiarEstadoDocumento(doc, "Verificado por Admin") },
+                                colors = ButtonDefaults.buttonColors(containerColor = VichyPrimary),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("✓ Verificar Integridad (Rol Administrativo)", fontSize = 13.sp)
+                                Text("✓ Verificar Integridad (Rol Administrativo)", fontSize = 13.sp, color = VichyWhite, fontWeight = FontWeight.Bold)
                             }
                         }
 
@@ -491,16 +502,16 @@ fun HomeScreen(
                                 Button(
                                     onClick = { viewModel.cambiarEstadoDocumento(doc, "Aprobado por Jefatura") },
                                     modifier = Modifier.weight(1f).padding(end = 4.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                                    colors = ButtonDefaults.buttonColors(containerColor = VichyPrimary)
                                 ) {
-                                    Text("Aprobar", fontSize = 13.sp)
+                                    Text("Aprobar", fontSize = 13.sp, color = VichyWhite, fontWeight = FontWeight.Bold)
                                 }
                                 Button(
                                     onClick = { viewModel.cambiarEstadoDocumento(doc, "Rechazado por Jefatura") },
                                     modifier = Modifier.weight(1f).padding(start = 4.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                                 ) {
-                                    Text("Rechazar", fontSize = 13.sp)
+                                    Text("Rechazar", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -509,28 +520,30 @@ fun HomeScreen(
             }
         }
 
-        // --- MÓDULO 3: BITÁCORA DE TRAZABILIDAD (Ciberseguridad) ---
+        // --- MÓDULO 3: BITÁCORA ---
         if (moduloActivo == "TRAZABILIDAD") {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                colors = CardDefaults.cardColors(containerColor = VichySurfaceGray.copy(alpha = 0.15f))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "Registro de Trazabilidad y Auditoría",
                         fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = VichyPrimary
                     )
                     Text(
                         text = "Control de accesos, cargas, modificaciones y aprobaciones en CMQ Salud:",
                         fontSize = 13.sp,
-                        color = Color.DarkGray,
+                        color = VichyDarkGray,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
                     bitacora.forEach { registro ->
                         Text(
                             text = "• $registro",
                             fontSize = 13.sp,
+                            color = VichyBlackText,
                             modifier = Modifier.padding(vertical = 4.dp)
                         )
                     }
@@ -571,6 +584,7 @@ fun RegistroScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(VichyWhite)
             .padding(24.dp)
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Center,
@@ -590,11 +604,11 @@ fun RegistroScreen(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .size(100.dp)
-                        .background(Color(0xFF2E7D32), shape = CircleShape)
+                        .background(VichyPrimary, shape = CircleShape)
                 ) {
                     Text(
                         text = "✓",
-                        color = Color.White,
+                        color = VichyWhite,
                         fontSize = 60.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -604,12 +618,13 @@ fun RegistroScreen(
                     text = "¡Usuario registrado en Room!",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2E7D32)
+                    color = VichyPrimary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Perfil: Funcionario (${uiState.centroSeleccionado})",
-                    fontSize = 15.sp
+                    fontSize = 15.sp,
+                    color = VichyDarkGray
                 )
             }
         }
@@ -619,12 +634,13 @@ fun RegistroScreen(
                 text = "Registro de Funcionario APS",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
+                color = VichyPrimary,
                 modifier = Modifier.padding(bottom = 4.dp)
             )
             Text(
                 text = "Rol asignado por seguridad: Funcionario",
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.secondary,
+                color = VichyDarkGray,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
@@ -654,7 +670,8 @@ fun RegistroScreen(
             Text(
                 text = "Seleccione Establecimiento de Salud (APS):",
                 fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.Bold,
+                color = VichyBlackText,
                 modifier = Modifier.align(Alignment.Start)
             )
 
@@ -667,7 +684,7 @@ fun RegistroScreen(
                         selected = (centro == uiState.centroSeleccionado),
                         onClick = { viewModel.onCentroChange(centro) }
                     )
-                    Text(text = centro, fontSize = 14.sp)
+                    Text(text = centro, fontSize = 14.sp, color = VichyBlackText, fontWeight = FontWeight.Medium)
                 }
             }
 
@@ -683,7 +700,8 @@ fun RegistroScreen(
                 )
                 Text(
                     text = "Acepto políticas de protección de datos de CMQ Salud",
-                    fontSize = 13.sp
+                    fontSize = 13.sp,
+                    color = VichyBlackText
                 )
             }
 
@@ -701,7 +719,7 @@ fun RegistroScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             basicButton(
-                text = "Guardar y Registrar en Room",
+                text = "Guardar y Registrar",
                 onClick = { viewModel.procesarRegistro() }
             )
 
@@ -711,7 +729,7 @@ fun RegistroScreen(
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
             ) {
-                Text(text = "Volver al Inicio de Sesión")
+                Text(text = "Volver al Inicio de Sesión", color = VichyPrimary, fontWeight = FontWeight.Bold)
             }
         }
     }
