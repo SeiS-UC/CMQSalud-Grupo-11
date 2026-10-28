@@ -784,7 +784,7 @@ fun HomeScreen(
         }
 
         Spacer(modifier = Modifier.height(20.dp))
-        basicButton(text = "Cerrar Sesión Segura", onClick = onCerrarSesion)
+        basicButton(text = "Cerrar Sesión", onClick = onCerrarSesion)
     }
 }
 
@@ -895,5 +895,6 @@ fun RegistroScreen(
                 }
             }
         }
+
     }
 }
